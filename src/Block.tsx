@@ -5,10 +5,13 @@ import {
     rgbObjectToRgbString,
     useColorPalettes,
 } from '@frontify/app-bridge';
+import { SegmentedControl } from '@frontify/fondue-components';
 import { type BlockProps } from '@frontify/guideline-blocks-settings';
 import { useEffect, useState, type FC } from 'react';
 
 import ColorSwatch from './ColorSwatch';
+
+type TransformMode = 'none' | 'remove-bg' | 'achro' | 'flip';
 
 interface Settings {
     colorInput: { red: number; green: number; blue: number; alpha: number };
@@ -19,6 +22,36 @@ export const AnExampleBlock: FC<BlockProps> = ({ appBridge }) => {
     const { colorPalettes } = useColorPalettes(appBridge);
     const [blockAsset, setBlockAsset] = useState<Asset | null>(null);
     const { blockAssets } = useBlockAssets(appBridge);
+    const [mode, setMode] = useState<TransformMode>('none');
+    const getTransformedUrl = (url: string | null | undefined, m: TransformMode) => {
+        if (!url) {
+            return null;
+        }
+        // Remove any width={width} placeholder
+        let cleaned = url.replace(/([&?])?width={width}/, '').replace(/&&/g, '&');
+        // Ensure no trailing ? or &
+        cleaned = cleaned.replace(/[?&]$/, '');
+        // Always start with mod=v1
+        const sep = cleaned.includes('?') ? '' : '?';
+        let finalUrl = `${cleaned}${sep}mod=v1`;
+        // Append transform using "/" as separator
+        switch (m) {
+            case 'remove-bg':
+                finalUrl += '/background=remove';
+                break;
+            case 'achro':
+                finalUrl += '/achro';
+                break;
+            case 'flip':
+                finalUrl += '/flip=both';
+                break;
+            case 'none':
+            default:
+                break;
+        }
+        return finalUrl;
+    };
+    const transformedUrl = getTransformedUrl(blockAsset?.previewUrl, mode);
 
     useEffect(() => {
         const uploadedAsset = blockAssets.assetUpload?.[0];
@@ -39,13 +72,19 @@ export const AnExampleBlock: FC<BlockProps> = ({ appBridge }) => {
                 Color Palette Explorer
             </h2>
 
-            {blockAsset?.previewUrl && (
+            {transformedUrl && (
                 <div className="tw-mb-6">
-                    <img
-                        src={blockAsset.previewUrl}
-                        alt="Uploaded asset"
-                        className="tw-max-w-md tw-rounded-lg tw-shadow-md"
-                    />
+                    <SegmentedControl.Root
+                        defaultValue="none"
+                        value={mode}
+                        onValueChange={(v) => setMode(v as TransformMode)}
+                    >
+                        <SegmentedControl.Item value="none">none</SegmentedControl.Item>
+                        <SegmentedControl.Item value="remove-bg">Remove BG</SegmentedControl.Item>
+                        <SegmentedControl.Item value="flip">flip</SegmentedControl.Item>
+                    </SegmentedControl.Root>
+                    {transformedUrl}
+                    <img src={transformedUrl} alt="Uploaded asset" className="tw-max-w-md tw-rounded-lg tw-shadow-md" />
                 </div>
             )}
 
