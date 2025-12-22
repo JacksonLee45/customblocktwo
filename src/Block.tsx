@@ -23,14 +23,16 @@ export const AnExampleBlock: FC<BlockProps> = ({ appBridge }) => {
     const [blockAsset, setBlockAsset] = useState<Asset | null>(null);
     const { blockAssets } = useBlockAssets(appBridge);
     const [mode, setMode] = useState<TransformMode>('none');
-    const getTransformedUrl = (url: string | null | undefined, m: TransformMode) => {
+    const getTransformedUrl = (url: string | null, m: TransformMode) => {
         if (!url) {
             return null;
         }
-        // Remove any width={width} placeholder
-        let cleaned = url.replace(/([&?])?width={width}/, '').replace(/&&/g, '&');
+        // Remove any width={width} placeholder (all occurrences, ?width={width} or &width={width})
+        let cleaned = url.replaceAll(/([&?])?width={width}/g, '');
+        // Collapse double ampersands (use replace with global regex for compatibility)
+        cleaned = cleaned.replaceAll('&&', '&');
         // Ensure no trailing ? or &
-        cleaned = cleaned.replace(/[?&]$/, '');
+        cleaned = cleaned.replace(/[&?]$/, '');
         // Always start with mod=v1
         const sep = cleaned.includes('?') ? '' : '?';
         let finalUrl = `${cleaned}${sep}mod=v1`;
@@ -51,7 +53,7 @@ export const AnExampleBlock: FC<BlockProps> = ({ appBridge }) => {
         }
         return finalUrl;
     };
-    const transformedUrl = getTransformedUrl(blockAsset?.previewUrl, mode);
+    const transformedUrl = getTransformedUrl(blockAsset?.previewUrl ?? null, mode);
 
     useEffect(() => {
         const uploadedAsset = blockAssets.assetUpload?.[0];
@@ -81,6 +83,7 @@ export const AnExampleBlock: FC<BlockProps> = ({ appBridge }) => {
                     >
                         <SegmentedControl.Item value="none">none</SegmentedControl.Item>
                         <SegmentedControl.Item value="remove-bg">Remove BG</SegmentedControl.Item>
+                        <SegmentedControl.Item value="achro">achro</SegmentedControl.Item>
                         <SegmentedControl.Item value="flip">flip</SegmentedControl.Item>
                     </SegmentedControl.Root>
                     {transformedUrl}
